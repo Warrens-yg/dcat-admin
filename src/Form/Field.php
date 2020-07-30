@@ -738,6 +738,16 @@ class Field implements Renderable
     }
 
     /**
+     * @param string $key
+     *
+     * @return mixed|null
+     */
+    public function getAttribute(string $key)
+    {
+        return $this->attributes[$key] ?? null;
+    }
+
+    /**
      * Specifies a regular expression against which to validate the value of the input.
      *
      * @param string $error
@@ -1105,6 +1115,16 @@ class Field implements Renderable
             'disabled'    => $this->attributes['disabled'] ?? false,
             'formId'      => $this->getFormElementId(),
         ]);
+    }
+
+    protected function isCreating()
+    {
+        return request()->isMethod('POST');
+    }
+
+    protected function isEditing()
+    {
+        return request()->isMethod('PUT');
     }
 
     /**

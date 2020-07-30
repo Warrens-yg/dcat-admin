@@ -8,8 +8,9 @@
 <p align="center">
 <a href="https://learnku.com/docs/dcat-admin/1.x">learnku文档</a> |
 <a href="http://www.dcatadmin.com/">文档</a> |
-<a href="https://jqhph.github.io/dcat-admin/demo.html">Demo</a> |
+<a href="https://jqhph.github.io/dcat-admin/demo.html">Demo (在线演示站)</a> |
 <a href="https://github.com/jqhph/dcat-admin-demo">Demo源码</a> |
+<a href="https://gitee.com/jqhph/dcat-admin-demo">Demo源码 (码云)</a> |
 <a href="#extensions">扩展</a>
 </p>
 
@@ -29,15 +30,17 @@
 
 ## 截图
 
-![](https://cdn.learnku.com/uploads/images/202005/24/38389/fnbgQWK115.png!large)
+![](https://cdn.learnku.com/uploads/images/202007/24/38389/4bCfBdtvq5.png!large)
 
-![](https://cdn.learnku.com/uploads/images/202006/13/38389/LMpJ0aqPEv.png!large)
+![](https://cdn.learnku.com/uploads/images/202007/24/38389/35KJXfVXib.png!large)
 
 ![](https://cdn.learnku.com/uploads/images/202004/24/38389/GBkt9jYnW0.png!large)
 
-![](https://cdn.learnku.com/uploads/images/202004/17/38389/MUGJxDwrSn.png!large)
+![](https://cdn.learnku.com/uploads/images/202007/12/38389/DUzCgtpPi8.png!large)
 
-![](https://cdn.learnku.com/uploads/images/202004/24/38389/bP75OeDbWH.png!large)
+![](https://cdn.learnku.com/uploads/images/202007/23/38389/sdgD7s9DP4.png!large)
+
+![](https://cdn.learnku.com/uploads/images/202007/12/38389/fjSNhbtg6f.png!large)
 
 ## 功能特性
 

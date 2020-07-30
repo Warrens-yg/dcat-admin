@@ -36,7 +36,7 @@ class Admin
      *
      * @var string
      */
-    const VERSION = '1.5.0';
+    const VERSION = '1.6.5';
 
     /**
      * @var array
@@ -171,6 +171,14 @@ class Admin
         $builder && $builder($navbar);
 
         return $navbar;
+    }
+
+    /**
+     * 禁用pjax.
+     */
+    public static function disablePjax()
+    {
+        static::$pjaxContainerId = null;
     }
 
     /**

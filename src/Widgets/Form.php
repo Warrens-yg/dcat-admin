@@ -4,7 +4,11 @@ namespace Dcat\Admin\Widgets;
 
 use Closure;
 use Dcat\Admin\Admin;
+use Dcat\Admin\Form\Concerns\HandleCascadeFields;
+use Dcat\Admin\Form\Concerns\HasRows;
+use Dcat\Admin\Form\Concerns\HasTabs;
 use Dcat\Admin\Form\Field;
+use Dcat\Admin\Form\Layout;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasAuthorization;
 use Dcat\Admin\Traits\HasFormResponse;
@@ -73,12 +77,16 @@ use Illuminate\Validation\Validator;
  * @method Field\KeyValue       keyValue($column, $label = '')
  * @method Field\Tel            tel($column, $label = '')
  * @method Field\Markdown       markdown($column, $label = '')
+ * @method Field\Range          range($start, $end, $label = '')
  */
 class Form implements Renderable
 {
     use HasHtmlAttributes,
         HasFormResponse,
         HasAuthorization,
+        HandleCascadeFields,
+        HasRows,
+        HasTabs,
         Macroable {
             __call as macroCall;
         }
@@ -94,6 +102,16 @@ class Form implements Renderable
      * @var Field[]|Collection
      */
     protected $fields;
+
+    /**
+     * @var Layout
+     */
+    protected $layout;
+
+    /**
+     * @var array
+     */
+    protected $variables = [];
 
     /**
      * @var bool
@@ -134,6 +152,11 @@ class Form implements Renderable
         'label' => 2,
         'field' => 8,
     ];
+
+    /**
+     * @var array
+     */
+    protected $confirm = [];
 
     /**
      * Form constructor.
@@ -198,9 +221,23 @@ class Form implements Renderable
      *
      * @return $this
      */
-    public function method($method = 'POST')
+    public function method(string $method = 'POST')
     {
         return $this->setHtmlAttribute('method', strtoupper($method));
+    }
+
+    /**
+     * @param string $title
+     * @param string $content
+     *
+     * @return $this
+     */
+    public function confirm(?string $title = null, ?string $content = null)
+    {
+        $this->confirm['title'] = $title;
+        $this->confirm['content'] = $content;
+
+        return $this;
     }
 
     /**
@@ -304,6 +341,29 @@ class Form implements Renderable
     public function fields()
     {
         return $this->fields;
+    }
+
+    /**
+     * @param int|float $width
+     * @param Closure   $callback
+     *
+     * @return $this
+     */
+    public function column($width, \Closure $callback)
+    {
+        $this->layout()->onlyColumn($width, function () use ($callback) {
+            $callback($this);
+        });
+
+        return $this;
+    }
+
+    /**
+     * @return Layout
+     */
+    public function layout()
+    {
+        return $this->layout ?: ($this->layout = new Layout($this));
     }
 
     /**
@@ -451,24 +511,32 @@ class Form implements Renderable
      *
      * @return $this
      */
-    public function pushField(Field &$field)
+    public function pushField(Field $field)
     {
         $this->fields->push($field);
+        if ($this->layout) {
+            $this->layout->addField($field);
+        }
 
         $field->setForm($this);
         $field->width($this->width['field'], $this->width['label']);
 
-        if ($field instanceof Field\File) {
+        $this->setFileUploadUrl($field);
+
+        $field::collectAssets();
+
+        return $this;
+    }
+
+    protected function setFileUploadUrl(Field $field)
+    {
+        if ($field instanceof Field\File && method_exists($this, 'form')) {
             $formData = [static::REQUEST_NAME => get_called_class()];
 
             $field->url(route(admin_api_route('form.upload')));
             $field->deleteUrl(route(admin_api_route('form.destroy-file'), $formData));
             $field->withFormData($formData);
         }
-
-        $field::collectAssets();
-
-        return $this;
     }
 
     /**
@@ -482,13 +550,22 @@ class Form implements Renderable
 
         $this->fillFields($this->model()->toArray());
 
-        return [
+        return array_merge([
             'start'   => $this->open(),
             'end'     => $this->close(),
             'fields'  => $this->fields,
             'method'  => $this->getHtmlAttribute('method'),
             'buttons' => $this->buttons,
-        ];
+            'rows'    => $this->rows(),
+            'layout'  => $this->layout,
+        ], $this->variables);
+    }
+
+    public function addVariables(array $variables)
+    {
+        $this->variables = array_merge($this->variables, $variables);
+
+        return $this;
     }
 
     public function fillFields(array $data)
@@ -604,17 +681,22 @@ HTML;
     /**
      * @return void
      */
-    protected function setupSubmitScript()
+    protected function setUpSubmitScript()
     {
+        $confirm = json_encode($this->confirm);
+
         Admin::script(
             <<<JS
 $('#{$this->getElementId()}').form({
     validate: true,
+    confirm: {$confirm},
     success: function (data) {
         {$this->buildSuccessScript()}
+        {$this->addSavedScript()}
     },
     error: function (response) {
         {$this->buildErrorScript()}
+        {$this->addErrorScript()}
     }
 });
 JS
@@ -623,6 +705,8 @@ JS
 
     /**
      * @return string|void
+     *
+     * @deprecated 将在2.0版本中废弃，请用 addSavedScript 代替
      */
     protected function buildSuccessScript()
     {
@@ -631,7 +715,23 @@ JS
     /**
      * @return string|void
      */
+    protected function addSavedScript()
+    {
+    }
+
+    /**
+     * @return string|void
+     *
+     * @deprecated 将在2.0版本中废弃，请用 addErrorScript 代替
+     */
     protected function buildErrorScript()
+    {
+    }
+
+    /**
+     * @return string|void
+     */
+    protected function addErrorScript()
     {
     }
 
@@ -684,8 +784,16 @@ JS
         $this->prepareHandler();
 
         if ($this->allowAjaxSubmit()) {
-            $this->setupSubmitScript();
+            $this->setUpSubmitScript();
         }
+
+        $tabObj = $this->getTab();
+
+        if (! $tabObj->isEmpty()) {
+            $tabObj->addScript();
+        }
+
+        $this->addVariables(['tabObj' => $tabObj]);
 
         return view($this->view, $this->variables())->render();
     }

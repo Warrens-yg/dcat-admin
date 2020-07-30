@@ -11,8 +11,6 @@ class Modal extends AbstractDisplayer
 {
     protected $title;
 
-    protected $renderable;
-
     public function title(string $title)
     {
         $this->title = $title;
@@ -66,10 +64,16 @@ JS;
         $id = $this->generateElementId();
 
         if ($callback instanceof \Closure) {
-            $html = Helper::render(
-                $callback->call($this->row, $this)
-            );
-        } elseif (is_string($callback) && is_subclass_of($callback, LazyRenderable::class)) {
+            $callback = $callback->call($this->row, $this);
+
+            if (! $callback instanceof LazyRenderable) {
+                $html = Helper::render($callback);
+
+                $callback = null;
+            }
+        }
+
+        if (is_string($callback) && is_subclass_of($callback, LazyRenderable::class)) {
             $html = '';
 
             $this->setUpLazyRenderable($id, $callback::make());

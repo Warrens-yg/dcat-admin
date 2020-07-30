@@ -11,8 +11,12 @@ use Illuminate\Support\Str;
 
 class Select extends Field
 {
+    use CanCascadeFields;
+
     public static $js = '@select2';
     public static $css = '@select2';
+
+    protected $cascadeEvent = 'change';
 
     /**
      * @var array
@@ -278,8 +282,7 @@ $.ajax({$ajaxOptions}).done(function(data) {
       var value = select.data('value') + '';
       
       if (value) {
-        value = value.split(',');
-        select.select2('val', value);
+        select.val(value.split(',')).trigger("change")
       }
   });
 });
@@ -398,6 +401,8 @@ JS;
         if (empty($this->script)) {
             $this->script = "$(\"{$this->getElementClassSelector()}\").select2($configs);";
         }
+
+        $this->addCascadeScript();
 
         if ($this->options instanceof \Closure) {
             $this->options = $this->options->bindTo($this->values());

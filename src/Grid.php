@@ -31,6 +31,7 @@ class Grid
         Concerns\HasSelector,
         Concerns\HasQuickCreate,
         Concerns\HasQuickSearch,
+        Concerns\CanFixColumns,
         Macroable {
             __call as macroCall;
         }
@@ -46,11 +47,18 @@ class Grid
     protected $model;
 
     /**
-     * Collection of all grid columns.
+     * Collection of grid columns.
      *
      * @var \Illuminate\Support\Collection
      */
     protected $columns;
+
+    /**
+     * Collection of all grid columns.
+     *
+     * @var \Illuminate\Support\Collection
+     */
+    protected $allColumns;
 
     /**
      * Collection of all data rows.
@@ -166,10 +174,11 @@ class Grid
         'show_row_selector'      => true,
         'show_create_button'     => true,
         'show_bordered'          => false,
+        'table_collapse'         => true,
         'show_toolbar'           => true,
         'create_mode'            => self::CREATE_MODE_DEFAULT,
         'dialog_form_area'       => ['700px', '670px'],
-        'table_class'            => null,
+        'table_class'            => ['table', 'dt-checkboxes-select'],
     ];
 
     /**
@@ -184,6 +193,7 @@ class Grid
     {
         $this->model = new Model(request(), $repository);
         $this->columns = new Collection();
+        $this->allColumns = new Collection();
         $this->rows = new Collection();
         $this->builder = $builder;
 
@@ -273,7 +283,7 @@ class Grid
      *
      * @param array $columns
      *
-     * @return Collection|void
+     * @return Collection|Column[]|void
      */
     public function columns($columns = null)
     {
@@ -295,6 +305,14 @@ class Grid
     }
 
     /**
+     * @return Collection|Column[]
+     */
+    public function allColumns()
+    {
+        return $this->allColumns;
+    }
+
+    /**
      * Add column to grid.
      *
      * @param string $field
@@ -307,6 +325,23 @@ class Grid
         $column = $this->newColumn($field, $label);
 
         $this->columns->put($field, $column);
+        $this->allColumns->put($field, $column);
+
+        return $column;
+    }
+
+    /**
+     * @param string $field
+     * @param string $label
+     *
+     * @return Column
+     */
+    public function prependColumn($field = '', $label = '')
+    {
+        $column = $this->newColumn($field, $label);
+
+        $this->columns->prepend($column, $field);
+        $this->allColumns->prepend($column, $field);
 
         return $column;
     }
@@ -352,6 +387,30 @@ class Grid
     }
 
     /**
+     * @param string|array $class
+     *
+     * @return $this
+     */
+    public function addTableClass($class)
+    {
+        $this->options['table_class'] = array_merge((array) $this->options['table_class'], (array) $class);
+
+        return $this;
+    }
+
+    public function formatTableClass()
+    {
+        if ($this->options['show_bordered']) {
+            $this->addTableClass(['table-bordered', 'complex-headers', 'dataTable']);
+        }
+        if ($this->getComplexHeaders()) {
+            $this->addTableClass('table-text-center');
+        }
+
+        return implode(' ', array_unique((array) $this->options['table_class']));
+    }
+
+    /**
      * Build the grid.
      *
      * @return void
@@ -389,7 +448,7 @@ class Grid
     /**
      * @return void
      */
-    protected function callBuilder()
+    public function callBuilder()
     {
         if ($this->builder && ! $this->built) {
             call_user_func($this->builder, $this);
@@ -478,17 +537,12 @@ class Grid
         $rowSelector = $this->rowSelector();
         $keyName = $this->getKeyName();
 
-        $column = $this->newColumn(
+        $this->prependColumn(
             Grid\Column::SELECT_COLUMN_NAME,
             $rowSelector->renderHeader()
-        );
-        $column->setGrid($this);
-
-        $column->display(function () use ($rowSelector, $keyName) {
+        )->display(function () use ($rowSelector, $keyName) {
             return $rowSelector->renderColumn($this, $this->{$keyName});
         });
-
-        $this->columns->prepend($column, Grid\Column::SELECT_COLUMN_NAME);
     }
 
     /**
@@ -526,6 +580,18 @@ class Grid
     public function withBorder(bool $value = true)
     {
         $this->options['show_bordered'] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param bool $value
+     *
+     * @return $this
+     */
+    public function tableCollapse(bool $value = true)
+    {
+        $this->options['table_collapse'] = $value;
 
         return $this;
     }
@@ -621,12 +687,19 @@ HTML;
     public function option($key, $value = null)
     {
         if (is_null($value)) {
-            return $this->options[$key];
+            return $this->options[$key] ?? null;
         }
 
         $this->options[$key] = $value;
 
         return $this;
+    }
+
+    protected function setUpOptions()
+    {
+        if ($this->options['show_bordered']) {
+            $this->tableCollapse(false);
+        }
     }
 
     /**
@@ -874,6 +947,10 @@ HTML;
             $this->callComposing();
 
             $this->build();
+
+            $this->applyFixColumns();
+
+            $this->setUpOptions();
         } catch (\Throwable $e) {
             return Admin::makeExceptionHandler()->handle($e);
         }

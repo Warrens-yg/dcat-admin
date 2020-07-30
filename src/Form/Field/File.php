@@ -77,12 +77,13 @@ class File extends Field implements UploadFieldInterface
         }
 
         $rules = $attributes = [];
+        $requiredIf = null;
 
-        if (! $this->hasRule('required')) {
+        if (! $this->hasRule('required') && ! $requiredIf = $this->getRule('required_if*')) {
             return false;
         }
 
-        $rules[$this->column] = 'required';
+        $rules[$this->column] = $requiredIf ?: 'required';
         $attributes[$this->column] = $this->label;
 
         return Validator::make($input, $rules, $this->getValidationMessages(), $attributes);
@@ -176,8 +177,9 @@ class File extends Field implements UploadFieldInterface
         $this->setUpScript();
 
         $this->addVariables([
-            'fileType'    => $this->options['isImage'] ? '' : 'file',
-            'containerId' => $this->containerId,
+            'fileType'      => $this->options['isImage'] ? '' : 'file',
+            'containerId'   => $this->containerId,
+            'showUploadBtn' => ($this->options['autoUpload'] ?? false) ? false : true,
         ]);
 
         return parent::render();

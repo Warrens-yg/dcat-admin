@@ -1,5 +1,5 @@
 {
-    "name": "warren/laravel-admin",
+    "name": "warrenkfz/laravel-admin",
     "description": "dcat admin",
     "type": "library",
     "keywords": ["dcat", "laravel", "admin", "grid", "form", "laravel admin"],
@@ -7,7 +7,7 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "warren",
+            "name": "warrenkfz",
             "email": "ajjergw14isfcu@gmail.com"
         }
     ],

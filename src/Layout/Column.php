@@ -25,7 +25,7 @@ class Column implements Renderable
      * @param $content
      * @param int $width
      */
-    public function __construct($content, $width = 12)
+    public function __construct($content, $width = 12, $style = '')
     {
         if ($content instanceof \Closure) {
             call_user_func($content, $this);
@@ -44,6 +44,8 @@ class Column implements Renderable
         } else {
             $this->width = $width;
         }
+        
+        $this->style = $style;
     }
 
     /**
@@ -108,7 +110,7 @@ class Column implements Renderable
             return "col-$key-$value";
         })->implode(' ');
 
-        return "<div class=\"{$classnName}\">";
+        return "<div class=\"{$classnName}\" style=\"{$this->style}\">";
     }
 
     /**

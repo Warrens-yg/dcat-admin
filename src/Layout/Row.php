@@ -29,15 +29,15 @@ class Row implements Renderable
      * @param int $width
      * @param $content
      */
-    public function column($width, $content)
+    public function column($width, $content, $style = '')
     {
         $width = $width < 1 ? round(12 * $width) : $width;
 
-        $column = new Column($content, $width);
+        $column = new Column($content, $width, $style);
 
         $this->addColumn($column);
     }
-
+    
     /**
      * @param Column $column
      */

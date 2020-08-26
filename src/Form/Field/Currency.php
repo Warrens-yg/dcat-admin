@@ -22,6 +22,7 @@ class Currency extends Text
         'radixPoint'         => '.',
         'prefix'             => '',
         'removeMaskOnSubmit' => true,
+        'rightAlign'         => false,
     ];
 
     /**
@@ -48,6 +49,16 @@ class Currency extends Text
     public function digits($digits)
     {
         return $this->options(compact('digits'));
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return mixed
+     */
+    protected function prepareInputValue($value)
+    {
+        return str_replace(',', '', $value);
     }
 
     /**

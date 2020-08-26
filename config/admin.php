@@ -300,10 +300,18 @@ return [
     | Admin map field provider
     |--------------------------------------------------------------------------
     |
-    | Supported: "tencent", "google", "yandex".
+    | Supported: "tencent", "google", "yandex", "baidu".
     |
     */
-    'map_provider' => 'google',
+    'map' => [
+        'provider' => 'baidu',
+
+        'keys' => [
+            'tencent' => env('TENCENT_MAP_API_KEY'),
+            'google' => env('GOOGLE_API_KEY'),
+            'baidu' => env('BAIDU_MAP_API_KEY'),
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -320,7 +328,8 @@ return [
 
         'sidebar_collapsed' => false,
 
-        'sidebar_dark' => false,
+        // light, primary, dark
+        'sidebar_style' => 'light',
 
         'dark_mode_switch' => false,
 

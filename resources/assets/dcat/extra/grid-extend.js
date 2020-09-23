@@ -50,7 +50,7 @@
                 _this.row = $this.closest('tr');
 
                 if ($this.data('inserted') == '0') {
-                    _this._request(1);
+                    _this.request(1);
                     $this.data('inserted', 1);
                 }
 
@@ -82,7 +82,7 @@
             })
         },
 
-        _request: function (page, after) {
+        request: function (page, after) {
             var _this = this,
                 row = _this.row,
                 key = _this.key,
@@ -95,9 +95,7 @@
             _this._req = 1;
             Dcat.loading();
 
-            var data = {
-                _token: Dcat.token,
-            };
+            var data = {};
 
             data[_this.options.parentIdQueryName] = key;
             data[_this.options.tierQueryName] = tier + 1;
@@ -146,7 +144,7 @@
                         // 加载更多
                         loadMore.click(function () {
                             var _t = $(this);
-                            _this._request(_t.data('page'), function () {
+                            _this.request(_t.data('page'), function () {
                                 _t.remove();
                             });
                         });
@@ -188,15 +186,11 @@
 
         this.direction = this.key = this.tier = this.row = this._req = null;
 
-        this._init();
+        this.init();
     }
 
     Orderable.prototype = {
-        _init: function () {
-            this._bindClick()
-        },
-
-        _bindClick: function () {
+        init: function () {
             var _this = this;
 
             $(_this.options.button).off('click').click(function () {
@@ -214,11 +208,11 @@
                 _this.row = $this.closest('tr');
                 _this.tier = getTier(_this.row);
 
-                _this._request();
+                _this.request();
             })
         },
 
-        _request: function () {
+        request: function () {
             var _this = this,
                 key = _this.key,
                 row = _this.row,
@@ -232,7 +226,7 @@
             $.ajax({
                 type: 'POST',
                 url: _this.options.url.replace(':key', key),
-                data: {_method:'PUT', _token:Dcat.token, _orderable:direction},
+                data: {_method:'PUT', _orderable:direction},
                 success: function(data){
                     Dcat.loading(false);
                     _this._req = 0;
@@ -337,6 +331,8 @@
             });
 
             box.find('.filter-box .reset').on('click', loadLink);
+
+            box.find('.grid-selector a').on('click', loadLink);
 
             Dcat.ready(function () {
                 setTimeout(function () {

@@ -507,7 +507,7 @@ class Builder
     {
         $field = $this->fields->first(function (Field $field) use ($name) {
             if (is_array($field->column())) {
-                return in_array($name, $field->column(), true);
+                return in_array($name, $field->column(), true) ? $field : null;
             }
 
             return $field === $name || $field->column() === $name;
@@ -742,6 +742,8 @@ class Builder
             $this->addHiddenField((new Hidden('_method'))->value('PUT'));
         }
 
+        $this->addHiddenField((new Hidden('_token'))->value(csrf_token()));
+
         $this->addRedirectUrlField();
 
         $attributes['id'] = $this->getElementId();
@@ -805,10 +807,22 @@ class Builder
             $this->form->updatedAtColumn(),
         ];
 
-        $this->fields = $this->fields()->reject(function (Field $field) use (&$reservedColumns) {
-            return in_array($field->column(), $reservedColumns)
+        $reject = function (Field $field) use (&$reservedColumns) {
+            return in_array($field->column(), $reservedColumns, true)
                 && $field instanceof Form\Field\Display;
-        });
+        };
+
+        $this->fields = $this->fields()->reject($reject);
+
+        if ($this->form->hasTab()) {
+            $this->form->getTab()->getTabs()->transform(function ($item) use ($reject) {
+                if (! empty($item['fields'])) {
+                    $item['fields'] = $item['fields']->reject($reject);
+                }
+
+                return $item;
+            });
+        }
     }
 
     /**

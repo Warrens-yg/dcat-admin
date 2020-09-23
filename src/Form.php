@@ -39,6 +39,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\Hidden                 hidden($column, $label = '')
  * @method Field\Id                     id($column, $label = '')
  * @method Field\Ip                     ip($column, $label = '')
+ * @method Field\Mac                    mac($column, $label = '')
  * @method Field\Url                    url($column, $label = '')
  * @method Field\Email                  email($column, $label = '')
  * @method Field\Mobile                 mobile($column, $label = '')
@@ -85,6 +86,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\ArrayField             array($column, $labelOrCallback, $callback = null)
  * @method Field\SelectTable            selectTable($column, $label = '')
  * @method Field\MultipleSelectTable    multipleSelectTable($column, $label = '')
+ * @method Field\Button                 button(string $html = null)
  */
 class Form implements Renderable
 {
@@ -129,6 +131,7 @@ class Form implements Renderable
         'hidden'              => Field\Hidden::class,
         'id'                  => Field\Id::class,
         'ip'                  => Field\Ip::class,
+        'mac'                 => Field\Mac::class,
         'map'                 => Field\Map::class,
         'mobile'              => Field\Mobile::class,
         'month'               => Field\Month::class,

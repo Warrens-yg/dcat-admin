@@ -142,7 +142,7 @@ class File extends Field implements UploadFieldInterface
 
     protected function formatFieldData($data)
     {
-        return Helper::array(Arr::get($data, $this->column));
+        return Helper::array(Arr::get($data, $this->normalizeColumn()));
     }
 
     /**
@@ -152,7 +152,7 @@ class File extends Field implements UploadFieldInterface
     {
         $previews = [];
 
-        foreach ($this->value() as $value) {
+        foreach (Helper::array($this->value()) as $value) {
             $previews[] = [
                 'id'   => $value,
                 'path' => basename($value),

@@ -101,10 +101,9 @@ class Select extends Field
     {
         if (Str::contains($field, '.')) {
             $field = $this->formatName($field);
-            $class = static::FIELD_CLASS_PREFIX.str_replace(['[', ']'], '_', $field);
-        } else {
-            $class = static::FIELD_CLASS_PREFIX.$field;
         }
+
+        $class = $this->normalizeElementClass($field);
 
         $sourceUrl = admin_url($sourceUrl);
 
@@ -124,7 +123,7 @@ $(document).on('change', "{$this->getElementClassSelector()}", function () {
                 d.text = d.$textField;
                 return d;
             })
-        }).val(target.attr('data-value')).trigger('change');
+        }).val(target.attr('data-value').split(',')).trigger('change');
     });
 });
 $("{$this->getElementClassSelector()}").trigger('change');
@@ -149,10 +148,10 @@ JS;
     {
         $fieldsStr = implode('^', array_map(function ($field) {
             if (Str::contains($field, '.')) {
-                return static::FIELD_CLASS_PREFIX.str_replace('.', '_', $field).'_';
+                return $this->normalizeElementClass($field).'_';
             }
 
-            return static::FIELD_CLASS_PREFIX.$field;
+            return $this->normalizeElementClass($field);
         }, (array) $fields));
         $urlsStr = implode('^', array_map(function ($url) {
             return admin_url($url);
@@ -172,7 +171,7 @@ JS;
                     d.text = d.$textField;
                     return d;
                 })
-            }).val(target.data('value')).trigger('change');
+            }).val(target.data('value').split(',')).trigger('change');
         });
     };
     

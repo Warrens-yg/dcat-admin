@@ -63,6 +63,11 @@ class Field implements Renderable
     protected $default;
 
     /**
+     * @var bool
+     */
+    protected $allowDefaultValueInEditPage = false;
+
+    /**
      * Element label.
      *
      * @var string
@@ -390,13 +395,18 @@ class Field implements Renderable
             $value = [];
 
             foreach ($this->column as $key => $column) {
-                $value[$key] = Arr::get($data, $column);
+                $value[$key] = Arr::get($data, $this->normalizeColumn($column));
             }
 
             return $value;
         }
 
-        return Arr::get($data, $this->column, $this->value);
+        return Arr::get($data, $this->normalizeColumn(), $this->value);
+    }
+
+    protected function normalizeColumn(?string $column = null)
+    {
+        return str_replace('->', '.', $column ?: $this->column);
     }
 
     /**
@@ -493,7 +503,27 @@ class Field implements Renderable
      */
     public function options($options = [])
     {
-        $this->options = $this->prepareOptions($options);
+        if ($options instanceof \Closure) {
+            $options = $options->call($this->data(), $this->value());
+        }
+
+        $this->options = array_merge($this->options, Helper::array($options));
+
+        return $this;
+    }
+
+    /**
+     * @param array $options
+     *
+     * @return $this
+     */
+    public function replaceOptions($options)
+    {
+        if ($options instanceof \Closure) {
+            $options = $options->call($this->data(), $this->value());
+        }
+
+        $this->options = $options;
 
         return $this;
     }
@@ -505,29 +535,7 @@ class Field implements Renderable
      */
     public function mergeOptions($options)
     {
-        $this->options = array_merge($this->options, $this->prepareOptions($options));
-
-        return $this;
-    }
-
-    /**
-     * Prepare options.
-     *
-     * @param $options
-     *
-     * @return array|mixed
-     */
-    protected function prepareOptions($options)
-    {
-        if ($options instanceof \Closure) {
-            $options = $options->call($this->data(), $this->value());
-        }
-
-        if ($options instanceof Arrayable) {
-            $options = $options->toArray();
-        }
-
-        return $options;
+        return $this->options($options);
     }
 
     /**
@@ -622,22 +630,26 @@ class Field implements Renderable
     /**
      * Get or set default value for field.
      *
-     * @param $default
+     * @param mixed $default
+     * @param bool  $edit
      *
      * @return $this|mixed
      */
-    public function default($default = null)
+    public function default($default = null, bool $edit = false)
     {
         if ($default === null) {
             if (
                 $this->form
                 && method_exists($this->form, 'isCreating')
                 && ! $this->form->isCreating()
+                && ! $this->allowDefaultValueInEditPage
             ) {
                 return;
             }
 
             if ($this->default instanceof \Closure) {
+                $this->default->bindTo($this->data());
+
                 return call_user_func($this->default, $this->form);
             }
 
@@ -645,6 +657,7 @@ class Field implements Renderable
         }
 
         $this->default = $default;
+        $this->allowDefaultValueInEditPage = $edit;
 
         return $this;
     }
@@ -947,7 +960,7 @@ class Field implements Renderable
      */
     public function setElementClass($class)
     {
-        $this->elementClass = array_merge($this->elementClass, (array) $class);
+        $this->elementClass = array_merge($this->elementClass, (array) $this->normalizeElementClass($class));
 
         return $this;
     }
@@ -960,14 +973,24 @@ class Field implements Renderable
     public function getElementClass()
     {
         if (! $this->elementClass) {
-            $name = $this->getElementName();
-
-            $this->elementClass = array_map(function ($v) {
-                return static::FIELD_CLASS_PREFIX.$v;
-            }, (array) str_replace(['[', ']'], '_', $name));
+            $this->elementClass = $this->normalizeElementClass((array) $this->getElementName());
         }
 
         return $this->elementClass;
+    }
+
+    /**
+     * @param string|array $class
+     *
+     * @return array|string
+     */
+    public function normalizeElementClass($class)
+    {
+        if (is_array($class)) {
+            return array_map([$this, 'normalizeElementClass'], $class);
+        }
+
+        return static::FIELD_CLASS_PREFIX.str_replace(['[', ']', '->', '.'], '_', $class);
     }
 
     /**

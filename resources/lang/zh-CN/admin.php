@@ -49,6 +49,7 @@ return [
     'name'                  => '名称',
     'username'              => '用户名',
     'old_password'          => '旧密码',
+    'manual'                => '说明书',
     'password'              => '密码',
     'password_confirmation' => '确认密码',
     'old_password_error'    => '请输入正确的旧密码',

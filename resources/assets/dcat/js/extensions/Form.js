@@ -14,6 +14,8 @@ class Form {
             form: null,
             // 开启表单验证
             validate: false,
+            // 确认弹窗
+            confirm: {title: null, content: null},
             // 表单错误信息class
             errorClass: 'has-error',
             // 表单错误信息容器选择器
@@ -24,8 +26,8 @@ class Form {
             tabSelector: '.tab-pane',
             // 错误信息模板
             errorTemplate: '<label class="control-label" for="inputError"><i class="feather icon-x-circle"></i> {message}</label><br/>',
-            // 保存成功后自动跳转
-            autoRedirect: false,
+            // 是否允许跳转
+            redirect: true,
             // 自动移除表单错误信息
             autoRemoveError: true,
             // 表单提交之前事件监听，返回false可以中止表单继续提交
@@ -42,12 +44,24 @@ class Form {
         _this.$form = $(_this.options.form).first();
         _this._errColumns = {};
 
-        _this.submit();
+        _this.init();
+    }
+
+    init() {
+        let _this = this;
+        let confirm = _this.options.confirm;
+
+        if (! confirm.title) {
+            return _this.submit();
+        }
+
+        Dcat.confirm(confirm.title, confirm.content, function () {
+            _this.submit();
+        });
     }
 
     submit() {
-        let Dcat = window.Dcat,
-            _this = this,
+        let _this = this,
             $form = _this.$form,
             options = _this.options,
             $submitButton = $form.find('[type="submit"],.submit');
@@ -78,7 +92,9 @@ class Form {
                 $submitButton.buttonLoading();
             },
             success: function (response) {
-                $submitButton.buttonLoading(false);
+                setTimeout(function () {
+                    $submitButton.buttonLoading(false);
+                }, 700);
 
                 if (options.after(true, response, _this) === false) {
                     return;
@@ -92,25 +108,15 @@ class Form {
                     return;
                 }
 
-
-                if (! response.status) {
-                    Dcat.error(response.message || 'Save failed!');
-                    return;
+                if (response.redirect === false || ! options.redirect) {
+                    if (response.data && response.data.then) {
+                        delete response.data['then']['redirect'];
+                        delete response.data['then']['location'];
+                        delete response.data['then']['refresh'];
+                    }
                 }
 
-                Dcat.success(response.message || 'Save succeeded!');
-
-                if (response.redirect === false) {
-                    return;
-                }
-
-                if (response.redirect) {
-                    return Dcat.reload(response.redirect);
-                }
-
-                if (options.autoRedirect) {
-                    history.back(-1);
-                }
+                Dcat.handleJsonResponse(response);
             },
             error: function (response) {
                 $submitButton.buttonLoading(false);

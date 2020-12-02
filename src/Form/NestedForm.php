@@ -57,16 +57,16 @@ class NestedForm extends WidgetForm
      */
     public function __construct($relation = null, $key = null)
     {
+        parent::__construct();
+
         $this->relationName = $relation;
 
         $this->key = $key;
 
-        $this->disableResetButton();
-        $this->disableSubmitButton();
+        $this->resetButton(false);
+        $this->submitButton(false);
         $this->ajax(false);
         $this->useFormTag(false);
-
-        parent::__construct();
     }
 
     /**
@@ -276,6 +276,7 @@ class NestedForm extends WidgetForm
         $this->fields->push($field);
 
         $field->setForm($this->form);
+        $field->setParent($this);
 
         if ($this->layout()->hasColumns()) {
             $this->layout()->addField($field);
@@ -283,10 +284,10 @@ class NestedForm extends WidgetForm
 
         if (method_exists($this->form, 'builder')) {
             $this->form->builder()->fields()->push($field);
-            $field->attribute(Builder::BUILD_IGNORE, true);
+            $field->attribute(Field::BUILD_IGNORE, true);
         }
 
-        $field->setNestedFormRelation([
+        $field->setRelation([
             'relation' => $this->relationName,
             'key'      => $this->key,
         ]);

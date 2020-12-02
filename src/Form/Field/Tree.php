@@ -85,7 +85,7 @@ class Tree extends Field
     /**
      * {@inheritDoc}
      */
-    public function readOnly()
+    public function readOnly(bool $value = true)
     {
         $this->readOnly = true;
 
@@ -223,8 +223,6 @@ class Tree extends Field
 
     public function render()
     {
-        $this->attribute('type', 'hidden');
-
         $checkboxes = new WidgetCheckbox();
 
         $checkboxes->style('primary');

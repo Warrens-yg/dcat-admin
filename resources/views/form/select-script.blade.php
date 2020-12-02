@@ -25,6 +25,8 @@
     @else
     $this.select2(configs);
     @endif
+
+    {!! $cascadeScript !!}
 </script>
 
 @if(isset($loads))
@@ -59,7 +61,7 @@
                 if (_this.value !== '0' && ! _this.value) {
                     return;
                 }
-                promises.push(refreshOptions(urls[index] + "?q="+ _this.value, target));
+                promises.push(refreshOptions(urls[index] + (urls[index].match(/\?/)?'&':'?') + "q="+ _this.value, target));
             });
 
             $.when(promises).then(function() {});

@@ -164,6 +164,11 @@ class Form implements Renderable
     protected $confirm = [];
 
     /**
+     * @var bool
+     */
+    protected $validationErrorToastr = true;
+
+    /**
      * Form constructor.
      *
      * @param array $data
@@ -269,6 +274,20 @@ class Form implements Renderable
     }
 
     /**
+     * 设置使用 Toastr 展示字段验证信息.
+     *
+     * @param bool $value
+     *
+     * @return $this
+     */
+    public function validationErrorToastr(bool $value = true)
+    {
+        $this->validationErrorToastr = $value;
+
+        return $this;
+    }
+
+    /**
      * Set primary key.
      *
      * @param mixed $value
@@ -358,7 +377,11 @@ class Form implements Renderable
     {
         foreach ($this->fields as $field) {
             if (is_array($field->column())) {
-                return in_array($name, $field->column(), true) ? $field : null;
+                $result = in_array($name, $field->column(), true) || $field->column() === $name ? $field : null;
+
+                if ($result) {
+                    return $result;
+                }
             }
 
             if ($field === $name || $field->column() === $name) {
@@ -440,11 +463,37 @@ class Form implements Renderable
     }
 
     /**
+     * @param bool $value
+     *
+     * @return $this
+     */
+    public function submitButton(bool $value = true)
+    {
+        $this->buttons['submit'] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param bool $value
+     *
+     * @return $this
+     */
+    public function resetButton(bool $value = true)
+    {
+        $this->buttons['reset'] = $value;
+
+        return $this;
+    }
+
+    /**
      * Disable reset button.
      *
      * @param bool $value
      *
      * @return $this
+     *
+     * @deprecated 即将废弃，请使用 resetButton 代替
      */
     public function disableResetButton(bool $value = true)
     {
@@ -459,6 +508,8 @@ class Form implements Renderable
      * @param bool $value
      *
      * @return $this
+     *
+     * @deprecated 即将废弃，请使用 submitButton 代替
      */
     public function disableSubmitButton(bool $value = true)
     {
@@ -628,7 +679,9 @@ HTML;
     public function fillFields(array $data)
     {
         foreach ($this->fields as $field) {
-            $field->fill($data);
+            if (! $field->hasAttribute(Field::BUILD_IGNORE)) {
+                $field->fill($data);
+            }
         }
     }
 
@@ -841,12 +894,14 @@ HTML;
     protected function addAjaxScript()
     {
         $confirm = admin_javascript_json($this->confirm);
+        $toastr = $this->validationErrorToastr ? 'true' : 'false';
 
         Admin::script(
             <<<JS
 $('#{$this->getElementId()}').form({
     validate: true,
     confirm: {$confirm},
+    validationErrorToastr: $toastr,
     success: function (data) {
         {$this->savedScript()}
     },

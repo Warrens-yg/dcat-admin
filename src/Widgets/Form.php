@@ -57,7 +57,7 @@ use Illuminate\Validation\Validator;
  * @method Field\SwitchField         switch($column, $label = '')
  * @method Field\Display             display($column, $label = '')
  * @method Field\Rate                rate($column, $label = '')
- * @method Field\Divide              divider()
+ * @method Field\Divide              divider(string $title = null)
  * @method Field\Password            password($column, $label = '')
  * @method Field\Decimal             decimal($column, $label = '')
  * @method Field\Html                html($html, $label = '')
@@ -629,27 +629,28 @@ class Form implements Renderable
             return;
         }
 
-        $buttons = '';
-
-        if (! empty($this->buttons['reset'])) {
-            $reset = trans('admin.reset');
-
-            $buttons .= "<button type=\"reset\" class=\"btn btn-white pull-left\"><i class=\"feather icon-rotate-ccw\"></i> {$reset}</button>";
-        }
-
-        if (! empty($this->buttons['submit'])) {
-            $submit = $this->getSubmitButtonLabel();
-
-            $buttons .= "<button type=\"submit\" class=\"btn btn-primary pull-right\"><i class=\"feather icon-save\"></i> {$submit}</button>";
-        }
-
         return <<<HTML
 <div class="box-footer row d-flex">
     <div class="col-md-2"> &nbsp;</div>
-
-    <div class="col-md-8">{$buttons}</div>
+    <div class="col-md-8">{$this->renderResetButton()}{$this->renderSubmitButton()}</div>
 </div>
 HTML;
+    }
+
+    protected function renderResetButton()
+    {
+        if (! empty($this->buttons['reset'])) {
+            $reset = trans('admin.reset');
+
+            return "<button type=\"reset\" class=\"btn btn-white pull-left\"><i class=\"feather icon-rotate-ccw\"></i> {$reset}</button>";
+        }
+    }
+
+    protected function renderSubmitButton()
+    {
+        if (! empty($this->buttons['submit'])) {
+            return "<button type=\"submit\" class=\"btn btn-primary pull-right\"><i class=\"feather icon-save\"></i> {$this->getSubmitButtonLabel()}</button>";
+        }
     }
 
     /**

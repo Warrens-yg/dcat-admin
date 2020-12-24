@@ -527,7 +527,7 @@ class Column
     {
         $i = 0;
 
-        foreach ($data as $key => $row) {
+        $data->transform(function ($row, $key) use (&$i) {
             $i++;
             if (! isset($row['#'])) {
                 $row['#'] = $i;
@@ -537,7 +537,11 @@ class Column
 
             $this->original = Arr::get($this->originalModel, $this->name);
 
-            $this->value = $value = $this->htmlEntityEncode(Arr::get($row, $this->name));
+            $this->value = $value = $this->htmlEntityEncode($original = Arr::get($row, $this->name));
+
+            if ($original === null) {
+                $original = (string) $original;
+            }
 
             $this->processConditions();
 
@@ -545,12 +549,14 @@ class Column
                 $value = $this->callDisplayCallbacks($this->original);
             }
 
-            if ($value !== $this->value) {
+            if ($original !== $value) {
                 Helper::arraySet($row, $this->name, $value);
             }
-        }
 
-        $this->value = $value ?? null;
+            $this->value = $value ?? null;
+
+            return $row;
+        });
     }
 
     /**

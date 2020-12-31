@@ -14,6 +14,10 @@
             <i class="feather icon-user"></i> {{ trans('admin.setting') }}
         </a>
 
+        <a class="dropdown-item" href="{{ admin_url('/') }}">
+            <i class="fa fa-book"></i> {{ trans('admin.manual') }}
+        </a>
+
         <div class="dropdown-divider"></div>
 
         <a class="dropdown-item" href="{{ admin_url('auth/logout') }}">

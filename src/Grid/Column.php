@@ -267,25 +267,32 @@ class Column
 
     /**
      * @example
-     *     $grid->config
-     *         ->if(function () {
-     *             return $this->config ? true : false;
+     *     $grid->column('...')
+     *         ->if(function ($column) {
+     *             return $column->getValue() ? true : false;
      *         })
      *         ->display($view)
      *         ->expand(...)
      *         ->else()
-     *         ->emptyString()
+     *         ->display('')
      *
-     *    $grid->config
-     *         ->if(function () {
-     *             return $this->config ? true : false;
-     *         })
+     *    $grid->column('...')
+     *         ->if()
      *         ->then(function (Column $column) {
      *             $column ->display($view)->expand(...);
      *         })
      *         ->else(function (Column $column) {
      *             $column->emptyString();
      *         })
+     *
+     *     $grid->column('...')
+     *         ->if()
+     *         ->display($view)
+     *         ->expand(...)
+     *         ->else()
+     *         ->display('')
+     *         ->end()
+     *         ->modal()
      *
      * @param \Closure $condition
      *
@@ -528,14 +535,16 @@ class Column
         $i = 0;
 
         $data->transform(function ($row, $key) use (&$i) {
+            $this->setOriginalModel(static::$originalGridModels[$key]);
+
+            $this->originalModel['_index'] = $row['_index'] = $i;
+
             $row = $this->convertModelToArray($row);
 
             $i++;
             if (! isset($row['#'])) {
                 $row['#'] = $i;
             }
-
-            $this->setOriginalModel(static::$originalGridModels[$key]);
 
             $this->original = Arr::get($this->originalModel, $this->name);
 
@@ -574,21 +583,9 @@ class Column
             return $row;
         }
 
-        // 这里禁止把驼峰转化为下划线
-        if (! empty($row::$snakeAttributes)) {
-            $shouldSnakeAttributes = true;
-
-            $row::$snakeAttributes = false;
-        }
-
         $array = $row->toArray();
 
-        // 转为数组后还原
-        if (isset($shouldSnakeAttributes)) {
-            $row::$snakeAttributes = true;
-        }
-
-        return $array;
+        return Helper::camelArray($array);
     }
 
     /**

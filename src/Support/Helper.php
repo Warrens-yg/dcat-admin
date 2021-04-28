@@ -2,7 +2,6 @@
 
 namespace Dcat\Admin\Support;
 
-use Dcat\Admin\Admin;
 use Dcat\Admin\Grid;
 use Dcat\Laravel\Database\WhereHasInServiceProvider;
 use Illuminate\Contracts\Support\Arrayable;
@@ -34,6 +33,8 @@ class Helper
         'video'      => 'mkv|rmvb|flv|mp4|avi|wmv|rm|asf|mpeg',
     ];
 
+    protected static $controllerNames = [];
+
     /**
      * 把给定的值转化为数组.
      *
@@ -44,7 +45,7 @@ class Helper
      */
     public static function array($value, bool $filter = true): array
     {
-        if (! $value) {
+        if ($value === null || $value === '' || $value === []) {
             return [];
         }
 
@@ -109,6 +110,30 @@ class Helper
         }
 
         return (string) $value;
+    }
+
+    /**
+     * 获取当前控制器名称.
+     *
+     * @return mixed|string
+     */
+    public static function getControllerName()
+    {
+        $router = app('router');
+
+        if (! $router->current()) {
+            return 'undefined';
+        }
+
+        $actionName = $router->current()->getActionName();
+
+        if (! isset(static::$controllerNames[$actionName])) {
+            $controller = class_basename(explode('@', $actionName)[0]);
+
+            static::$controllerNames[$actionName] = str_replace('Controller', '', $controller);
+        }
+
+        return static::$controllerNames[$actionName];
     }
 
     /**
@@ -258,7 +283,7 @@ class Helper
         }
 
         // 判断路由名称
-        if ($request->routeIs($path)) {
+        if ($request->routeIs($path) || $request->routeIs(admin_route_name($path))) {
             return true;
         }
 
@@ -391,13 +416,14 @@ class Helper
      *
      * @param array $array
      * @param mixed $value
+     * @param bool $strict
      */
-    public static function deleteByValue(&$array, $value)
+    public static function deleteByValue(&$array, $value, bool $strict = false)
     {
         $value = (array) $value;
 
         foreach ($array as $index => $item) {
-            if (in_array($item, $value)) {
+            if (in_array($item, $value, $strict)) {
                 unset($array[$index]);
             }
         }
@@ -817,6 +843,9 @@ class Helper
      */
     public static function htmlEntityEncode($item)
     {
+        if (is_object($item)) {
+            return $item;
+        }
         if (is_array($item)) {
             array_walk_recursive($item, function (&$value) {
                 $value = htmlentities($value);
@@ -905,5 +934,56 @@ class Helper
         $array[array_shift($keys)] = $value;
 
         return $array;
+    }
+
+    /**
+     * 把下划线风格字段名转化为驼峰风格.
+     *
+     * @param array $array
+     *
+     * @return array
+     */
+    public static function camelArray(array &$array)
+    {
+        foreach ($array as $k => $v) {
+            if (is_array($v)) {
+                Helper::camelArray($v);
+            }
+
+            $array[Str::camel($k)] = $v;
+        }
+
+        return $array;
+    }
+
+    /**
+     * 获取文件名称.
+     *
+     * @param string $name
+     *
+     * @return array|mixed
+     */
+    public static function basename($name)
+    {
+        if (! $name) {
+            return $name;
+        }
+
+        return last(explode('/', $name));
+    }
+
+    /**
+     * @param string|int $key
+     * @param array|object $arrayOrObject
+     *
+     * @return bool
+     */
+    public static function keyExists($key, $arrayOrObject)
+    {
+        if (is_object($arrayOrObject)) {
+            $arrayOrObject = static::array($arrayOrObject, false);
+        }
+
+        return array_key_exists($key, $arrayOrObject);
     }
 }

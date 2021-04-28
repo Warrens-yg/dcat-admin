@@ -59,7 +59,9 @@ trait HasFieldValidator
     {
         $this->updateRules = $this->mergeRules($rules, $this->updateRules);
 
-        $this->setValidationMessages('update', $messages);
+        if ($messages) {
+            $this->setValidationMessages('update', $messages);
+        }
 
         return $this;
     }
@@ -76,7 +78,9 @@ trait HasFieldValidator
     {
         $this->creationRules = $this->mergeRules($rules, $this->creationRules);
 
-        $this->setValidationMessages('creation', $messages);
+        if ($messages) {
+            $this->setValidationMessages('creation', $messages);
+        }
 
         return $this;
     }
@@ -103,7 +107,9 @@ trait HasFieldValidator
             $this->rules = array_merge($originalRules, array_filter(explode('|', $rules)));
         }
 
-        $this->setValidationMessages('default', $messages);
+        if ($messages) {
+            $this->setValidationMessages('default', $messages);
+        }
 
         return $this;
     }
@@ -387,9 +393,10 @@ trait HasFieldValidator
                 if (! Arr::has($input, $column)) {
                     continue;
                 }
-                $input[$column.$key] = Arr::get($input, $column);
-                $rules[$column.$key] = $fieldRules;
-                $attributes[$column.$key] = "{$this->label}[$column]";
+                $k = $column.$key;
+                Arr::set($input, $k, Arr::get($input, $column));
+                $rules[$k] = $fieldRules;
+                $attributes[$k] = "{$this->label}[$column]";
             }
         }
 

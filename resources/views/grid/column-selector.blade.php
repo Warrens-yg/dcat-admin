@@ -3,7 +3,7 @@
         <i class="fa fa-table"></i>
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu" role="menu">
+    <ul class="dropdown-menu" role="menu" style="min-width: 155px">
         <li class="dropdown-item">
             <ul class="selectors">
                 {!! $selectAll !!}
@@ -46,7 +46,7 @@
         }
 
         Dcat.reload(url.toString());
-    }, 1400);
+    }, 200);
 
     $('.column-selector .column-select-item').on('change', function () {
         submit($(this));

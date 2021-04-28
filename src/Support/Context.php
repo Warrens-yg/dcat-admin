@@ -14,6 +14,7 @@ use Illuminate\Support\Fluent;
  * @property array|null $html
  * @property array|null $ignoreQueries
  * @property array|null $jsVariables
+ * @property string $translation
  */
 class Context extends Fluent
 {
@@ -31,6 +32,17 @@ class Context extends Fluent
     public function get($key, $default = null)
     {
         return Arr::get($this->attributes, $key, $default);
+    }
+
+    public function remember($key, \Closure $callback)
+    {
+        if (($value = $this->get($key)) !== null) {
+            return $value;
+        }
+
+        return tap($callback(), function ($value) use ($key) {
+            $this->set($key, $value);
+        });
     }
 
     public function getArray($key, $default = null)
@@ -51,7 +63,7 @@ class Context extends Fluent
         return $this->set($key, $results);
     }
 
-    public function addMany($key, array $value)
+    public function merge($key, array $value)
     {
         $results = $this->getArray($key);
 

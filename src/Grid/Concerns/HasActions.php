@@ -16,20 +16,13 @@ trait HasActions
     protected $actionsCallback = [];
 
     /**
-     * Actions column display class.
-     *
-     * @var string
-     */
-    protected $actionsClass;
-
-    /**
      * @param string $actionClass
      *
      * @return $this
      */
     public function setActionClass(string $actionClass)
     {
-        $this->actionsClass = $actionClass;
+        $this->options['actions_class'] = $actionClass;
 
         return $this;
     }
@@ -41,8 +34,8 @@ trait HasActions
      */
     public function getActionClass()
     {
-        if ($this->actionsClass) {
-            return $this->actionsClass;
+        if ($this->options['actions_class']) {
+            return $this->options['actions_class'];
         }
 
         if ($class = config('admin.grid.grid_action_class')) {
@@ -87,7 +80,7 @@ trait HasActions
      */
     protected function appendActionsColumn()
     {
-        if (! $this->options['show_actions']) {
+        if (! $this->options['actions']) {
             return;
         }
 
@@ -106,7 +99,7 @@ trait HasActions
      */
     public function disableActions(bool $disable = true)
     {
-        return $this->option('show_actions', ! $disable);
+        return $this->option('actions', ! $disable);
     }
 
     /**
@@ -128,7 +121,7 @@ trait HasActions
      */
     public function disableEditButton(bool $disable = true)
     {
-        $this->options['show_edit_button'] = ! $disable;
+        $this->options['edit_button'] = ! $disable;
 
         return $this;
     }
@@ -152,7 +145,7 @@ trait HasActions
      */
     public function disableQuickEditButton(bool $disable = true)
     {
-        $this->options['show_quick_edit_button'] = ! $disable;
+        $this->options['quick_edit_button'] = ! $disable;
 
         return $this;
     }
@@ -176,7 +169,7 @@ trait HasActions
      */
     public function disableViewButton(bool $disable = true)
     {
-        $this->options['show_view_button'] = ! $disable;
+        $this->options['view_button'] = ! $disable;
 
         return $this;
     }
@@ -202,7 +195,7 @@ trait HasActions
      */
     public function disableDeleteButton(bool $disable = true)
     {
-        $this->options['show_delete_button'] = ! $disable;
+        $this->options['delete_button'] = ! $disable;
 
         return $this;
     }

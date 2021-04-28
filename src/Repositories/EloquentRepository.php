@@ -3,13 +3,18 @@
 namespace Dcat\Admin\Repositories;
 
 use Dcat\Admin\Contracts\TreeRepository;
+use Dcat\Admin\Exception\AdminException;
 use Dcat\Admin\Exception\RuntimeException;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Show;
+use Dcat\Laravel\Database\SoftDeletes as DcatSoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -76,8 +81,11 @@ class EloquentRepository extends Repository implements TreeRepository
 
         $this->setKeyName($this->model()->getKeyName());
 
+        $traits = class_uses($this->model());
+
         $this->setIsSoftDeletes(
-            in_array(SoftDeletes::class, class_uses($this->model()))
+            in_array(SoftDeletes::class, $traits, true)
+            || in_array(DcatSoftDeletes::class, $traits, true)
         );
     }
 
@@ -160,7 +168,7 @@ class EloquentRepository extends Repository implements TreeRepository
         }
 
         $model->getQueries()->unique()->each(function ($value) use (&$query) {
-            if ($value['method'] === 'paginate') {
+            if ($value['method'] === 'paginate' || $value['method'] === 'simplePaginate') {
                 $value['arguments'][1] = $this->getGridColumns();
             } elseif ($value['method'] === 'get') {
                 $value['arguments'] = [$this->getGridColumns()];
@@ -181,46 +189,176 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     protected function setSort(Grid\Model $model)
     {
-        [$column, $type] = $model->getSort();
+        [$column, $type, $cast] = $model->getSort();
 
         if (empty($column) || empty($type)) {
+            $orders = $model->findQueryByMethod('orderBy')->merge($model->findQueryByMethod('orderByDesc'));
+
+            $model->resetOrderBy();
+
+            $orders->each(function ($orderBy) use ($model) {
+                $column = $orderBy['arguments'][0];
+                $type = $orderBy['method'] === 'orderByDesc' ? 'desc' : ($orderBy['arguments'][1] ?? 'asc');
+                $cast = null;
+
+                $this->addOrderBy($model, $column, $type, $cast);
+            });
+
             return;
         }
 
-        if (Str::contains($column, '.')) {
-            $this->setRelationSort($model, $column, $type);
-        } else {
-            $model->resetOrderBy();
+        $model->resetOrderBy();
 
+        $this->addOrderBy($model, $column, $type, $cast);
+    }
+
+    /**
+     * @param Grid\Model $model
+     * @param string $column
+     * @param string $type
+     * @param string $cast
+     *
+     * @throws \Exception
+     */
+    protected function addOrderBy(Grid\Model $model, $column, $type, $cast)
+    {
+        $explodedCols = explode('.', $column);
+        $isRelation = empty($explodedCols[1]) ? false : method_exists($this->model(), $explodedCols[0]);
+
+        if (count($explodedCols) > 1 && $isRelation) {
+            $this->setRelationSort($model, $column, $type, $cast);
+
+            return;
+        }
+
+        $this->setOrderBy(
+            $model,
+            str_replace('.', '->', $column),
+            $type,
+            $cast);
+    }
+
+    /**
+     * @param Grid\Model $model
+     * @param $column
+     * @param $type
+     *
+     * @param $cast
+     */
+    protected function setOrderBy(Grid\Model $model, $column, $type, $cast)
+    {
+        $isJsonColumn = Str::contains($column, '->');
+
+        if ($isJsonColumn) {
+            $explodedCols = explode('->', $column);
+            // json字段排序
+            $col = $this->wrapMySqlColumn(array_shift($explodedCols));
+            $parts = implode('.', $explodedCols);
+            $column = "JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.{$parts}'))";
+        }
+
+        if (! empty($cast)) {
+            $column = $this->wrapMySqlColumn($column);
+
+            $model->addQuery(
+                'orderByRaw',
+                ["CAST({$column} AS {$cast}) {$type}"]
+            );
+
+            return;
+        }
+
+        if ($isJsonColumn) {
+            $model->addQuery('orderByRaw', ["{$column} {$type}"]);
+        } else {
             $model->addQuery('orderBy', [$column, $type]);
         }
+    }
+
+    /**
+     * @param string $column
+     *
+     * @return string
+     */
+    protected function wrapMySqlColumn($column)
+    {
+        if (Str::contains($column, '`')) {
+            return $column;
+        }
+
+        $columns = explode('.', $column);
+
+        foreach ($columns as &$column) {
+            if (! Str::contains($column, '`')) {
+                $column = "`{$column}`";
+            }
+        }
+
+        return implode('.', $columns);
     }
 
     /**
      * 设置关联数据排序.
      *
      * @param Grid\Model $model
-     * @param string     $column
-     * @param string     $type
+     * @param string $column
+     * @param string $type
+     * @param string $cast
      *
-     * @return void
+     * @throws \Exception
      */
-    protected function setRelationSort(Grid\Model $model, $column, $type)
+    protected function setRelationSort(Grid\Model $model, $column, $type, $cast)
     {
-        [$relationName, $relationColumn] = explode('.', $column);
+        [$relationName, $relationColumn] = explode('.', $column, 2);
 
-        if ($model->getQueries()->contains(function ($query) use ($relationName) {
-            return $query['method'] == 'with' && in_array($relationName, $query['arguments']);
-        })) {
-            $model->addQuery('select', [$this->getGridColumns()]);
+        $relation = $this->model()->$relationName();
 
-            $model->resetOrderBy();
+        $model->addQuery('select', [$this->model()->getTable().'.*']);
 
-            $model->addQuery('orderBy', [
-                $relationColumn,
-                $type,
-            ]);
+        $model->addQuery('join', $this->joinParameters($relation));
+
+        $this->setOrderBy(
+            $model,
+            $relation->getRelated()->getTable().'.'.str_replace('.', '->', $relationColumn),
+            $type,
+            $cast
+        );
+    }
+
+    /**
+     * 关联模型 join 连接查询.
+     *
+     * @param Relation $relation
+     *
+     * @throws \Exception
+     *
+     * @return array
+     */
+    protected function joinParameters(Relation $relation)
+    {
+        $relatedTable = $relation->getRelated()->getTable();
+
+        if ($relation instanceof BelongsTo) {
+            $foreignKeyMethod = version_compare(app()->version(), '5.8.0', '<') ? 'getForeignKey' : 'getForeignKeyName';
+
+            return [
+                $relatedTable,
+                $relation->{$foreignKeyMethod}(),
+                '=',
+                $relatedTable.'.'.$relation->getRelated()->getKeyName(),
+            ];
         }
+
+        if ($relation instanceof HasOne) {
+            return [
+                $relatedTable,
+                $relation->getQualifiedParentKeyName(),
+                '=',
+                $relation->getQualifiedForeignKeyName(),
+            ];
+        }
+
+        throw new AdminException('Related sortable only support `HasOne` and `BelongsTo` relation.');
     }
 
     /**
@@ -232,14 +370,16 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     protected function setPaginate(Grid\Model $model)
     {
-        $paginate = $model->findQueryByMethod('paginate');
+        $paginateMethod = $model->getPaginateMethod();
 
-        $model->rejectQuery(['paginate']);
+        $paginate = $model->findQueryByMethod($paginateMethod)->first();
+
+        $model->rejectQuery(['paginate', 'simplePaginate']);
 
         if (! $model->allowPagination()) {
             $model->addQuery('get', [$this->getGridColumns()]);
         } else {
-            $model->addQuery('paginate', $this->resolvePerPage($model, $paginate));
+            $model->addQuery($paginateMethod, $this->resolvePerPage($model, $paginate));
         }
     }
 

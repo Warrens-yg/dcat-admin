@@ -11,7 +11,11 @@ class Show extends RowAction
      */
     public function title()
     {
-        return '<i class="feather icon-eye"></i> '.__('admin.show');
+        if ($this->title) {
+            return $this->title;
+        }
+
+        return '<i class="feather icon-eye"></i> '.__('admin.show').' &nbsp;&nbsp;';
     }
 
     /**

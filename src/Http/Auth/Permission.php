@@ -3,13 +3,15 @@
 namespace Dcat\Admin\Http\Auth;
 
 use Dcat\Admin\Admin;
-use Dcat\Admin\Http\Middleware\Pjax;
 use Dcat\Admin\Layout\Content;
-use Dcat\Admin\Models\Role;
+use Dcat\Admin\Support\Helper;
 use Illuminate\Contracts\Support\Arrayable;
+use Symfony\Component\HttpFoundation\Response;
 
 class Permission
 {
+    protected static $errorHandler;
+
     /**
      * Check permission.
      *
@@ -84,15 +86,21 @@ class Permission
 
     /**
      * Send error response page.
+     *
+     * @throws \Illuminate\Http\Exceptions\HttpResponseException
      */
     public static function error()
     {
-        if (! request()->pjax() && request()->ajax()) {
+        if ($error = static::$errorHandler) {
+            admin_exit($error());
+        }
+
+        if (Helper::isAjaxRequest()) {
             abort(403, trans('admin.deny'));
         }
 
-        Pjax::respond(
-            response((new Content())->withError(trans('admin.deny')))
+        admin_exit(
+            Content::make()->withError(trans('admin.deny'))
         );
     }
 
@@ -103,6 +111,18 @@ class Permission
      */
     public static function isAdministrator()
     {
-        return ! config('admin.permission.enable') || Admin::user()->isRole(Role::ADMINISTRATOR);
+        $roleModel = config('admin.database.roles_model');
+
+        return ! config('admin.permission.enable') || Admin::user()->isRole($roleModel::ADMINISTRATOR);
+    }
+
+    /**
+     * @param \Closure $callback
+     *
+     * @return void
+     */
+    public static function registerErrorHandler(\Closure $callback)
+    {
+        static::$errorHandler = $callback;
     }
 }

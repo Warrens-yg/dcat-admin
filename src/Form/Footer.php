@@ -15,6 +15,13 @@ class Footer implements Renderable
     protected $view = 'admin::form.footer';
 
     /**
+     * Footer view data.
+     *
+     * @var array
+     */
+    protected $data = [];
+
+    /**
      * Form builder instance.
      *
      * @var Builder
@@ -34,6 +41,13 @@ class Footer implements Renderable
      * @var array
      */
     protected $checkboxes = ['view' => true, 'continue_editing' => true, 'continue_creating' => true];
+
+    /**
+     * Default checked.
+     *
+     * @var arrays
+     */
+    protected $defaultcheckeds = ['view' => false, 'continue_editing' => false, 'continue_creating' => false];
 
     /**
      * Footer constructor.
@@ -116,6 +130,48 @@ class Footer implements Renderable
     }
 
     /**
+     * default View Checked.
+     *
+     * @param bool $checked
+     *
+     * @return $this
+     */
+    public function defaultViewChecked(bool $checked = true)
+    {
+        $this->defaultcheckeds['view'] = $checked;
+
+        return $this;
+    }
+
+    /**
+     * default Editing Checked.
+     *
+     * @param bool $checked
+     *
+     * @return $this
+     */
+    public function defaultEditingChecked(bool $checked = true)
+    {
+        $this->defaultcheckeds['continue_editing'] = $checked;
+
+        return $this;
+    }
+
+    /**
+     * default Creating Checked.
+     *
+     * @param bool $checked
+     *
+     * @return $this
+     */
+    public function defaultCreatingChecked(bool $checked = true)
+    {
+        $this->defaultcheckeds['continue_creating'] = $checked;
+
+        return $this;
+    }
+
+    /**
      * Build checkboxes.
      *
      * @return Checkbox|null
@@ -127,6 +183,7 @@ class Footer implements Renderable
         }
 
         $options = [];
+        $checked = [];
 
         if ($this->checkboxes['continue_editing']) {
             $options[1] = sprintf('<span class="text-80 text-bold">%s</span>', trans('admin.continue_editing'));
@@ -140,11 +197,36 @@ class Footer implements Renderable
             $options[3] = sprintf('<span class="text-80 text-bold">%s</span>', trans('admin.view'));
         }
 
+        if ($this->defaultcheckeds['continue_editing']) {
+            $checked[] = 1;
+        }
+
+        if ($this->defaultcheckeds['continue_creating']) {
+            $checked[] = 2;
+        }
+
+        if ($this->defaultcheckeds['view']) {
+            $checked[] = 3;
+        }
+
         if (! $options) {
             return;
         }
 
-        return (new Checkbox('after-save', $options))->inline()->circle(true);
+        return (new Checkbox('after-save', $options))->check($checked)->inline()->circle(true);
+    }
+
+    /**
+     * Use custom view.
+     *
+     * @param string $view
+     * @param array $data
+     */
+    public function view(string $view, array $data = [])
+    {
+        $this->view = $view;
+
+        $this->data = $data;
     }
 
     /**
@@ -159,6 +241,8 @@ class Footer implements Renderable
             'checkboxes' => $this->buildCheckboxes(),
             'width'      => $this->builder->getWidth(),
         ];
+
+        $data = array_merge($data, $this->data);
 
         return view($this->view, $data)->render();
     }

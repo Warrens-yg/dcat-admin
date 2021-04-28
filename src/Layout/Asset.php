@@ -4,7 +4,6 @@ namespace Dcat\Admin\Layout;
 
 use Dcat\Admin\Admin;
 use Dcat\Admin\Color;
-use function GuzzleHttp\Psr7\parse_query;
 use Illuminate\Support\Str;
 
 class Asset
@@ -149,7 +148,7 @@ class Asset
                 '@admin/dcat/extra/markdown.css',
             ],
         ],
-        '@markdown' => [
+        '@editor-md-form' => [
             'js' => [
                 '@admin/dcat/plugins/editor-md/lib/raphael.min.js',
                 '@admin/dcat/plugins/editor-md/editormd.min.js',
@@ -268,14 +267,12 @@ class Asset
     public function __construct()
     {
         $this->isPjax = request()->pjax();
-
-        $this->initTheme();
     }
 
     /**
      * 初始化主题样式.
      */
-    protected function initTheme()
+    protected function setUpTheme()
     {
         $color = Admin::color()->getName();
 
@@ -371,7 +368,9 @@ class Asset
 
         foreach ($files as &$file) {
             foreach ($params as $k => $v) {
-                $file = str_replace("{{$k}}", $v, $file);
+                if ($v !== '' && $v !== null) {
+                    $file = str_replace("{{$k}}", $v, $file);
+                }
             }
         }
 
@@ -412,7 +411,7 @@ class Asset
     {
         if (is_array($alias)) {
             foreach ($alias as $v) {
-                $this->require($v);
+                $this->require($v, $params);
             }
 
             return;
@@ -673,6 +672,8 @@ class Asset
      */
     public function cssToHtml()
     {
+        $this->setUpTheme();
+
         $this->mergeBaseCss();
 
         $html = '';
@@ -765,8 +766,8 @@ class Asset
      */
     public function scriptToHtml()
     {
-        $script = implode(';', array_unique($this->script));
-        $directScript = implode(';', array_unique($this->directScript));
+        $script = implode(";\n", array_unique($this->script));
+        $directScript = implode(";\n", array_unique($this->directScript));
 
         return <<<HTML
 <script data-exec-on-popstate>

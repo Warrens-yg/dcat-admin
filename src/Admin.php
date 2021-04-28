@@ -20,16 +20,17 @@ use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 class Admin
 {
     use HasAssets;
     use HasHtml;
 
-    const VERSION = '2.0.15-beta';
+    const VERSION = '2.0.24-beta';
 
     const SECTION = [
         // 往 <head> 标签内输入内容
@@ -46,6 +47,10 @@ class Admin
         // 顶部导航栏用户面板
         'NAVBAR_USER_PANEL' => 'ADMIN_NAVBAR_USER_PANEL',
         'NAVBAR_AFTER_USER_PANEL' => 'ADMIN_NAVBAR_AFTER_USER_PANEL',
+        // 顶部导航栏之前
+        'NAVBAR_BEFORE' => 'ADMIN_NAVBAR_BEFORE',
+        // 顶部导航栏底下
+        'NAVBAR_AFTER' => 'ADMIN_NAVBAR_AFTER',
 
         // 侧边栏顶部用户信息面板
         'LEFT_SIDEBAR_USER_PANEL' => 'ADMIN_LEFT_SIDEBAR_USER_PANEL',
@@ -122,6 +127,16 @@ class Admin
     }
 
     /**
+     * 设置翻译文件路径.
+     *
+     * @param string|null $path
+     */
+    public static function translation(?string $path)
+    {
+        static::context()->translation = $path;
+    }
+
+    /**
      * 获取登录用户模型.
      *
      * @return Model|Authenticatable|HasPermissions
@@ -154,14 +169,30 @@ class Admin
     }
 
     /**
-     * 禁用pjax.
+     * 启用或禁用Pjax.
+     *
+     * @param bool $value
+     *
+     * @return void
      */
-    public static function disablePjax()
+    public static function pjax(bool $value = true)
     {
-        static::context()->pjaxContainerId = false;
+        static::context()->pjaxContainerId = $value ? static::$defaultPjaxContainerId : false;
     }
 
     /**
+     * 禁用pjax.
+     *
+     * @return void
+     */
+    public static function disablePjax()
+    {
+        static::pjax(false);
+    }
+
+    /**
+     * 获取pjax ID.
+     *
      * @return string|void
      */
     public static function getPjaxContainerId()
@@ -307,11 +338,23 @@ class Admin
     }
 
     /**
+     * 上下文管理.
+     *
      * @return \Dcat\Admin\Support\Context
      */
     public static function context()
     {
         return app('admin.context');
+    }
+
+    /**
+     * 翻译器.
+     *
+     * @return \Dcat\Admin\Support\Translator
+     */
+    public static function translator()
+    {
+        return app('admin.translator');
     }
 
     /**
@@ -362,6 +405,24 @@ class Admin
         }
 
         return app('admin.extend');
+    }
+
+    /**
+     * 响应并中断后续逻辑.
+     *
+     * @param Response|string|array $response
+     *
+     * @throws HttpResponseException
+     */
+    public static function exit($response = '')
+    {
+        if (is_array($response)) {
+            $response = response()->json($response);
+        } elseif ($response instanceof JsonResponse) {
+            $response = $response->send();
+        }
+
+        throw new HttpResponseException($response instanceof Response ? $response : response($response));
     }
 
     /**
@@ -434,15 +495,31 @@ class Admin
 
         $sidebarStyle = config('admin.layout.sidebar_style') ?: 'light';
 
-        $jsVariables['pjax_container_selector'] = '#'.static::getPjaxContainerId();
+        $pjaxId = static::getPjaxContainerId();
+
+        $jsVariables['pjax_container_selector'] = $pjaxId ? ('#'.$pjaxId) : '';
         $jsVariables['token'] = csrf_token();
         $jsVariables['lang'] = __('admin.client') ?: [];
         $jsVariables['colors'] = static::color()->all();
-        $jsVariables['dark_mode'] = Str::contains(config('admin.layout.body_class'), 'dark-mode');
+        $jsVariables['dark_mode'] = static::isDarkMode();
         $jsVariables['sidebar_dark'] = config('admin.layout.sidebar_dark') || ($sidebarStyle === 'dark');
         $jsVariables['sidebar_light_style'] = in_array($sidebarStyle, ['dark', 'light'], true) ? 'sidebar-light-primary' : 'sidebar-primary';
 
         return admin_javascript_json($jsVariables);
+    }
+
+    /**
+     * @return bool
+     */
+    public static function isDarkMode()
+    {
+        $bodyClass = config('admin.layout.body_class');
+
+        return in_array(
+            'dark-mode',
+            is_array($bodyClass) ? $bodyClass : explode(' ', $bodyClass),
+            true
+        );
     }
 
     /**
@@ -455,7 +532,6 @@ class Admin
         $attributes = [
             'prefix'     => config('admin.route.prefix'),
             'middleware' => config('admin.route.middleware'),
-            'as'         => static::app()->getName().'.',
         ];
 
         if (config('admin.auth.enable', true)) {
@@ -490,17 +566,15 @@ class Admin
     /**
      * 注册api路由.
      *
-     * @param string $as
-     *
      * @return void
      */
-    public static function registerApiRoutes(string $as = null)
+    public static function registerApiRoutes()
     {
         $attributes = [
             'prefix'     => admin_base_path('dcat-api'),
             'middleware' => config('admin.route.middleware'),
-            'as'         => $as ?: static::app()->getApiRoutePrefix(Application::DEFAULT),
             'namespace'  => 'Dcat\Admin\Http\Controllers',
+            'as'         => 'dcat-api.',
         ];
 
         app('router')->group($attributes, function ($router) {
@@ -530,7 +604,6 @@ class Admin
         $attributes = [
             'prefix'     => config('admin.route.prefix'),
             'middleware' => config('admin.route.middleware'),
-            'as'         => static::app()->getName().'.',
         ];
 
         app('router')->group($attributes, function ($router) {

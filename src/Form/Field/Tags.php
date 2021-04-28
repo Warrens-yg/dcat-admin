@@ -40,7 +40,7 @@ class Tags extends Field
      */
     protected function formatFieldData($data)
     {
-        $value = Arr::get($data, $this->normalizeColumn());
+        $value = $this->getValueFromData($data);
 
         if (is_array($value) && $this->keyAsValue) {
             $value = array_column($value, $this->visibleColumn, $this->key);
@@ -57,7 +57,7 @@ class Tags extends Field
      *
      * @return $this
      */
-    public function pluck($visibleColumn, $key)
+    public function pluck($visibleColumn, $key = 'id')
     {
         if (! empty($visibleColumn) && ! empty($key)) {
             $this->keyAsValue = true;

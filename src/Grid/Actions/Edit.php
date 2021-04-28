@@ -11,7 +11,11 @@ class Edit extends RowAction
      */
     public function title()
     {
-        return '<i class="feather icon-edit-1"></i> '.__('admin.edit');
+        if ($this->title) {
+            return $this->title;
+        }
+
+        return '<i class="feather icon-edit-1"></i> '.__('admin.edit').' &nbsp;&nbsp;';
     }
 
     /**
@@ -19,6 +23,6 @@ class Edit extends RowAction
      */
     public function href()
     {
-        return "{$this->resource()}/{$this->getKey()}/edit";
+        return $this->parent->getEditUrl($this->getKey());
     }
 }

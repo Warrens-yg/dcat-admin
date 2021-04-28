@@ -15,6 +15,7 @@ use Spatie\EloquentSortable\SortableTrait;
  * @property string $parentColumn
  * @property string $titleColumn
  * @property string $orderColumn
+ * @property string $defaultParentId
  * @property array  $sortable
  */
 trait ModelTree
@@ -60,6 +61,14 @@ trait ModelTree
     }
 
     /**
+     * @return string
+     */
+    public function getDefaultParentId()
+    {
+        return isset($this->defaultParentId) ? $this->defaultParentId : '0';
+    }
+
+    /**
      * Set query callback to model.
      *
      * @param \Closure|null $query
@@ -86,7 +95,7 @@ trait ModelTree
 
         return Helper::buildNestedArray(
             $nodes,
-            0,
+            $this->getDefaultParentId(),
             $this->getKeyName(),
             $this->getParentColumn()
         );
@@ -332,16 +341,6 @@ trait ModelTree
     /**
      * {@inheritdoc}
      */
-    public function delete()
-    {
-        $this->where($this->getParentColumn(), $this->getKey())->delete();
-
-        return parent::delete();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     protected static function boot()
     {
         parent::boot();
@@ -370,6 +369,14 @@ trait ModelTree
             }
 
             return $branch;
+        });
+
+        static::deleting(function ($model) {
+            static::query()
+                ->where($model->getParentColumn(), $model->getKey())
+                ->get()
+                ->each
+                ->delete();
         });
     }
 }

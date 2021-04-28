@@ -57,12 +57,15 @@ return [
     |
     */
     'route' => [
+        'domain' => env('ADMIN_ROUTE_DOMAIN'),
 
         'prefix' => env('ADMIN_ROUTE_PREFIX', 'admin'),
 
         'namespace' => 'App\\Admin\\Controllers',
 
         'middleware' => ['web', 'admin'],
+
+        'enable_session_middleware' => false,
     ],
 
     /*
@@ -150,14 +153,37 @@ return [
         'enable_session_middleware' => false,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | The global Grid setting
+    |--------------------------------------------------------------------------
+    */
     'grid' => [
 
-        /*
-        |--------------------------------------------------------------------------
-        | The global Grid action display class.
-        |--------------------------------------------------------------------------
-        */
+        // The global Grid action display class.
         'grid_action_class' => Dcat\Admin\Grid\Displayers\DropdownActions::class,
+
+        // The global Grid batch action display class.
+        'batch_action_class' => Dcat\Admin\Grid\Tools\BatchActions::class,
+
+        // The global Grid pagination display class.
+        'paginator_class' => Dcat\Admin\Grid\Tools\Paginator::class,
+
+        'actions' => [
+            'view' => Dcat\Admin\Grid\Actions\Show::class,
+            'edit' => Dcat\Admin\Grid\Actions\Edit::class,
+            'quick_edit' => Dcat\Admin\Grid\Actions\QuickEdit::class,
+            'delete' => Dcat\Admin\Grid\Actions\Delete::class,
+            'batch_delete' => Dcat\Admin\Grid\Tools\BatchDelete::class,
+        ],
+
+        // The global Grid column selector setting.
+        'column_selector' => [
+            'store' => Dcat\Admin\Grid\ColumnSelector\SessionStore::class,
+            'store_params' => [
+                'driver' => 'file',
+            ],
+        ],
     ],
 
     /*
@@ -189,7 +215,6 @@ return [
             'auth/logout',
             'auth/setting',
         ],
-
     ],
 
     /*
@@ -208,6 +233,13 @@ return [
         // Whether enable menu bind to a permission.
         'bind_permission' => true,
 
+        // Whether enable role bind to menu.
+        'role_bind_menu' => true,
+
+        // Whether enable permission bind to menu.
+        'permission_bind_menu' => true,
+
+        'default_icon' => 'feather icon-circle',
     ],
 
     /*
@@ -281,7 +313,10 @@ return [
         // default, blue, blue-light, green
         'color' => 'default',
 
-        'body_class' => '',
+        // sidebar-separate
+        'body_class' => [],
+
+        'horizontal_menu' => false,
 
         'sidebar_collapsed' => false,
 
